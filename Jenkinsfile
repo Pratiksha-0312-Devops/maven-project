@@ -7,43 +7,27 @@ pipeline {
       }
     }
 
-    stage('compile the job') //validate then compile
+    stage('package job') //valiadte, compile, test & then package
     {
       steps {
-        withMaven(globalMavenSettingsConfig: '', jdk: 'JDK_HOME', maven: 'MVN_HOME', mavenSettingsConfig: '', traceability: true) {
-          sh 'mvn compile'
+          withMaven(globalMavenSettingsConfig: '', jdk: 'JDK_HOME', maven: 'MVN_HOME', mavenSettingsConfig: '', traceability: true) {
+          sh 'mvn package'
+          }
         }
       }
-    }
 
-    stage('execute unit test framework') {
+    
+    stage('deploy job') //valiadte, compile, test & then package
+    {
       steps {
-        withMaven(globalMavenSettingsConfig: '', jdk: 'JDK_HOME', maven: 'MVN_HOME', mavenSettingsConfig: '', traceability: true) {
-          sh 'mvn test'
+      sshagent(['DEV_CICD']) {
+        sh 'scp -o StrictHostKeyChecking=no webapp/target/webapp.war ec2-user@172.31.10.238:/usr/share/tomcat/webapps'
+        }
+
+
+          }
         }
       }
+
+
     }
-    stage('build the code') {
-      steps {
-        withMaven(globalMavenSettingsConfig: '', jdk: 'JDK_HOME', maven: 'MVN_HOME', mavenSettingsConfig: '', traceability: true) {
-          sh 'mvn clean -B -DskipTests package'
-        }
-      }
-    }
-    stage('create docker image') {
-      steps {
-        sh 'docker build -t e31531469/devops923:latest .'
-      }
-    }
-    stage('push docker image to dockerhub') {
-      steps {
-        
-        withDockerRegistry(credentialsId: 'Docker_hub_Cred', url: 'https://index.docker.io/v1/') {
-            
-                sh 'docker push e31531469/devops923:latest'
-            
-        }
-      }
-    }
-  }
-}
